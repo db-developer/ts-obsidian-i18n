@@ -1,0 +1,61 @@
+{
+  "name": "ts-obsidian-i18n",
+  "version": "1.0.0",
+  "description": "Unified i18n for obsidian plugins",
+  "author": "Dirk Brenckmann <db.developer@gmx.de>",
+  "license": "MIT",
+  "main": "index.js",
+  "module": "index.js",
+  "types": "index.d.ts",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "import": "./index.js",
+      "types": "./index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "rollup --config .config/rollup.config.mjs --environment BUILD:production",
+    "coverage": "vitest run --coverage --config .config/vitest.config.ts",
+    "package": "npm run build && npm pack",
+    "test": "vitest --config .config/vitest.config.ts",
+    "test:watch": "vitest --watch --config .config/vitest.config.ts",
+    "test:ui": "vitest --ui --config .config/vitest.config.ts"
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "CHANGELOG.md",
+    "LICENSE",
+    "README.md",
+    "ROADMAP.md"
+  ],
+  "peerDependencies": {
+    "obsidian": ">=1.5.0"
+  },
+  "peerDependenciesMeta": {
+    "obsidian": {
+      "optional": false
+    }
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^29.0.0",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^12.3.0",
+    "@trivago/prettier-plugin-sort-imports": "^6.0.0",
+    "@types/node": "^24.10.0",
+    "@vitest/coverage-v8": "^4.0.15",
+    "@vitest/ui": "^4.0.15",
+    "jsdom": "^27.4.0",
+    "obsidian": "^1.10.2-1",
+    "prettier": "^3.7.4",
+    "prettier-plugin-align": "^0.0.1-alpha.1",
+    "rollup": "^4.53.1",
+    "rollup-plugin-dts": "^6.3.0",
+    "tslib": "^2.8.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.15"
+  }
+}

@@ -1,0 +1,29 @@
+# vscode
+# .vscode 
+
+# Intellij
+*.iml
+.idea
+
+# npm
+node_modules
+
+# Don't include the compiled main.js file in the repo.
+# They should be uploaded to GitHub releases instead.
+main.js
+
+# Exclude sourcemaps
+*.map
+
+# Exclude macOS Finder (System Explorer) View States
+.DS_Store
+
+# Exclude coverage. Unittests not yet ready.
+coverage
+
+# Built files
+index.js
+index.d.ts
+index.d.ts.map
+log.d.ts
+log.d.ts.map
