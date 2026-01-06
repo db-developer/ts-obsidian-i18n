@@ -240,13 +240,12 @@ console.log(i18n("settings.header"));
 
 ```ts
 // file1.ts
-import { I18NService } from "ts-obsidian-i18n";
-const i18n1 = I18NService.init({ resources });
+import { I18N } from "./bootstrap";
+console.log(I18N("fiel.1.header"));
 
 // file2.ts
-import { I18NService } from "ts-obsidian-i18n";
-const i18n2 = I18NService.init();
-console.log(i18n2("settings.header")); // same reference, same behavior
+import { I18N } from "./bootstrap";
+console.log(I18N("file.2.header")); // same reference, same behavior
 ```
 
 ---
