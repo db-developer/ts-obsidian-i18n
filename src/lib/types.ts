@@ -6,20 +6,20 @@
  *
  * The values are marker-only and have no runtime meaning.
  */
-export interface I18NKeyMap {[key: string]: true}
+export type I18NKeyMapOf<T extends Record<string, true>> = T;
 
 /**
  * Union type of all registered i18n keys.
  */
-export type I18NKey = keyof I18NKeyMap;
+export type I18NKey<T extends Record<string, true>> = keyof T;
 
 /**
  * A single language resource.
  * Must provide a translation for every registered i18n key.
  */
-export type I18NResource = {[K in I18NKey]: string};
+export type I18NResource<T extends Record<string, true>> = {[K in keyof T]: string};
 
 /**
  * Collection of language resources indexed by language code.
  */
-export type I18NResourcesByLang = Record<string, I18NResource>;
+export type I18NResourcesByLang<T extends Record<string, true>> = Record<string, I18NResource<T>>;

@@ -60,15 +60,32 @@ obsidian >= 1.5.0
 Create or augment the key map using TypeScript module augmentation:
 
 ```ts
-// src/lib/types.d.ts
+// src/lib/types.ts
 import "ts-obsidian-i18n";
 
+/**
+ * Define all translation keys here.
+ * Each key must map to `true`.
+ */
+export const I18NKeys = {
+  "settings.header": true;
+  "settings.table.header.prefix": true;
+  "settings.control.tooltip.delete": true;
+} as const;
+
+/**
+ * Type representing all valid translation keys.
+ * This enables type-safe key checking in the translation function.
+ */
+export type I18NKeyMap = typeof I18NKeys;
+
+/**
+ * Augment the module to include our key map.
+ * This ensures unique keys across the plugin.
+ */
 declare module "ts-obsidian-i18n" {
-  interface I18NKeyMap {
-    "settings.header": true;
-    "settings.table.header.prefix": true;
-    "settings.control.tooltip.delete": true;
-  }
+  // may look redundant, but necessary for augmentation
+  type I18NKeyMap = typeof I18NKeys;
 }
 ```
 
@@ -81,6 +98,7 @@ declare module "ts-obsidian-i18n" {
 Define translations for each language you want to support:
 
 ```ts
+// src/lib/lang.ts
 import type { I18NResourcesByLang } from "ts-obsidian-i18n";
 
 export const resources: I18NResourcesByLang = {
@@ -97,6 +115,32 @@ export const resources: I18NResourcesByLang = {
 };
 ```
 
+alternatively, you can import resources from separate files:
+
+```ts
+// src/lib/de.ts
+import type { I18NResource } from "ts-obsidian-i18n";
+import type { I18NKeyMap   } from "./types";
+
+export const de: I18NResource<I18NKeyMap> = {
+  "settings.header": "Einstellungen",
+  "settings.table.header.prefix": "Präfix",
+  "settings.control.tooltip.delete": "Mapping löschen"
+};
+```
+
+and then:
+
+```ts
+// src/lib/lang.ts
+import type { I18NResourcesByLang } from "ts-obsidian-i18n";
+import      { en                  } from "./en";
+import      { de                  } from "./de";
+import type { I18NKeyMap          } from "./types";
+
+export const RESOURCES: I18NResourcesByLang<I18NKeyMap> = { en, de };
+```
+
 > Every key from `I18NKeyMap` **must exist** in each resource.
 
 ---
@@ -104,12 +148,27 @@ export const resources: I18NResourcesByLang = {
 ### 3. Initialize the I18N service
 
 ```ts
+// src/lib/bootstrap.ts
+import { I18NService } from "ts-obsidian-i18n";
+import { RESOURCES   } from "./lang";
+
+export { I18NService } from "ts-obsidian-i18n";
+export const I18N = I18NService.init({resources: RESOURCES, fallbackLanguage: "en"});
+```
+
+```ts
+// src/lib/plugin.ts
 import { I18NService } from "ts-obsidian-i18n";
 
-const i18n = I18NService.init({
-  resources,
-  fallbackLanguage: "en" // optional, defaults to __PLUGIN_FALLBACK_LANGUAGE__ or "en"
-});
+export class DailyNoteStructurePlugin extends Plugin {
+  public constructor(app: App, manifest: PluginManifest) {
+    super(app, manifest);
+    // Provide 'app' to I18NService for Obsidian integration
+    I18NService.init({ app });
+  }
+  // ...
+}
+
 ```
 
 * `i18n` is a **translation function**: `(key: I18NKey) => string`
@@ -121,8 +180,9 @@ const i18n = I18NService.init({
 ### 4. Use the translation function
 
 ```ts
-console.log(i18n("settings.header")); // "Settings" or localized value
-console.log(i18n("settings.table.header.prefix")); // "Prefix" or localized value
+import { I18N } from "./bootstrap";
+console.log(I18N("settings.header")); // "Settings" or localized value
+console.log(I18N("settings.table.header.prefix")); // "Prefix" or localized value
 ```
 
 * Automatically uses language from `window.localStorage.getItem("language")`
@@ -154,7 +214,9 @@ export default {
   plugins: [
     replace({
       preventAssignment: true,
-      __PLUGIN_FALLBACK_LANGUAGE__: JSON.stringify("en") // your desired fallback
+      values: {
+        __PLUGIN_FALLBACK_LANGUAGE__: JSON.stringify("en") // your desired fallback
+      }
     })
   ]
 };

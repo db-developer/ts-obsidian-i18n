@@ -1,4 +1,7 @@
-import      { resolveLanguage      } from "./i18n.internal";
+import      { App                  } from "obsidian";
+import      { getAppLocale,
+              getBrowserLocale,
+              resolveLanguage      } from "./i18n.internal";
 import type { I18NResourcesByLang, 
               I18NKey              } from "./types";
 
@@ -19,7 +22,7 @@ import type { I18NResourcesByLang,
  *
  * This class has no public constructor and cannot be instantiated directly.
  */
-export class I18NService {
+export class I18NService<T extends Record<string, true>> {
   /**
    * Holds the singleton instance of the I18NService.
    *
@@ -28,7 +31,7 @@ export class I18NService {
    *
    * A null value indicates that the service has not been initialized yet.
    */  
-  private static singleton: I18NService | null = null;
+  private static singleton: I18NService<any> | null = null;
 
   /**
    * The internally stored translation function.
@@ -37,7 +40,20 @@ export class I18NService {
    * This ensures that the same function reference is returned on every access
    * and can be safely used across modules without rebinding.
    */
-  private readonly _i18n: (key: I18NKey) => string;
+  private readonly _i18n: (key: I18NKey<T>) => string;
+
+  /**
+   * Reference to the Obsidian application instance.
+   *
+   * This property is assigned by Obsidian when the plugin is loaded and provides
+   * access to core application services such as the workspace, vault, metadata
+   * cache, and registered APIs.
+   *
+   * It is declared as optional because it may be undefined during early lifecycle
+   * phases (e.g. before `onload` has completed) or after the plugin has been
+   * unloaded.
+   */
+  private app?: App;
 
   /**
    * Initializes the global i18n service and returns the translation function.
@@ -60,20 +76,22 @@ export class I18NService {
    * @throws {Error} If called without settings on first invocation.
    * @throws {Error} If the provided resource map is empty.
    */
-  static init(settings?: {
-    resources: I18NResourcesByLang;
-    fallbackLanguage?: string;
-  }): (key: I18NKey) => string {
+  static init<T extends Record<string, true>>(settings?: {
+    resources?: I18NResourcesByLang<T>,
+    fallbackLanguage?: string,
+    app?: App
+  }): (key: I18NKey<T>) => string {
     if (!I18NService.singleton) {
       if (!settings) {
         throw new Error("Missing init settings.");
       }
 
-      if (Object.keys(settings.resources).length === 0) {
+      const resources = settings?.resources;
+
+      if (!resources || Object.keys(resources).length === 0) {
         throw new Error("Missing i18n resources.");
       }
 
-      const resources = settings.resources;
       const language  = resolveLanguage(
         resources,
         settings.fallbackLanguage
@@ -81,8 +99,26 @@ export class I18NService {
 
       I18NService.singleton = new I18NService(resources, language);
     }
+    
+    if (settings?.app) {
+      I18NService.singleton.app = settings.app;
+    }
 
     return I18NService.singleton.i18n;
+  }
+
+  /**
+   * Returns the currently active application language.
+   *
+   * This static accessor delegates to the singleton instance of the I18N service.
+   * If the service has not been initialized yet, `null` is returned.
+   *
+   * @returns The active language identifier (e.g. `"en"`, `"de"`), or `null`
+   *          if the I18N service singleton is not available.
+   */
+  static get language(): string | null {
+    if (!I18NService.singleton) return null;
+    else return I18NService.singleton.getLanguage();
   }
 
   /**
@@ -91,27 +127,32 @@ export class I18NService {
    * This constructor is intentionally private and may only be invoked internally
    * during singleton initialization via {@link I18NService.init}.
    *
-   * The translation function is created once during construction and is lexically
-   * bound to this instance, ensuring a stable reference for all subsequent calls.
+   * The translation function is created exactly once during construction and
+   * closes over the service instance. The returned function reference remains
+   * stable for the lifetime of the plugin, while the resolved language is
+   * determined dynamically at call time based on the current runtime context
+   * (Obsidian app locale if available, otherwise browser locale, with a
+   * fallback to the resolved fallback language).
    *
    * @param resources The complete set of i18n resources indexed by language code.
    * Each language resource must provide translations for all registered i18n keys.
    * @param fallbackLanguage The resolved fallback language used when no explicit
-   * language is available at runtime.
+   * runtime language can be determined or no matching resource exists.
    */
   private constructor(
-    private readonly resources: I18NResourcesByLang,
+    private readonly resources: I18NResourcesByLang<T>,
     private readonly fallbackLanguage: string
   ) {
     // store local references to avoid `this` inside closure
+    const app = this.app;
     const res = this.resources;
     const fb = this.fallbackLanguage;
 
     // create translation function once
-    this._i18n = (key: I18NKey): string => {
-      const lang = window.localStorage.getItem("language") ?? fb;
-      const resource = res[lang] ?? res[fb];
-      return resource[key];
+    this._i18n = (key: I18NKey<T>): string => {
+      const lang = this.getLanguage() ?? fb;
+      if (lang in res) return res[lang][key];
+      else return res[fb][key];
     };
   }
 
@@ -130,7 +171,21 @@ export class I18NService {
    * @returns A translation function that maps an {@link I18NKey} to a localized
    * string.
    */
-  private get i18n(): (key: I18NKey) => string {
+  private get i18n(): (key: I18NKey<T>) => string {
     return this._i18n;
+  }
+
+  /**
+   * Determines the effective language to be used by the I18N service.
+   *
+   * If an Obsidian application instance is available, the locale configured
+   * within Obsidian is returned. Otherwise, the browser's locale is used
+   * as a fallback.
+   *
+   * @returns The resolved language identifier (e.g. `"en"`, `"de"`).
+   */
+  public getLanguage(): string|null {
+    const language = getBrowserLocale();
+    return ( this.app ? getAppLocale(this.app) : language) ?? language;
   }
 }

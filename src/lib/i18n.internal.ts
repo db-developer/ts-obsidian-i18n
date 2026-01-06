@@ -1,4 +1,21 @@
+import type { App                 } from "obsidian";
 import type { I18NResourcesByLang } from "./types"
+
+/**
+ * Represents a Vault object with access to configuration values.
+ *
+ * Extends the standard Obsidian Vault (`App["vault"]`) by adding a
+ * `getConfig` method to retrieve stored configuration keys.
+ *
+ * @typedef {App["vault"] & { getConfig(key: string): string | null }} VaultWithConfig
+ *
+ * @property {function(string): string | null} getConfig
+ *   Retrieves the value of a configuration key from the vault.
+ *   Returns `null` if the key does not exist.
+ */
+type VaultWithConfig = App["vault"] & {
+  getConfig(key: string): string | null;
+};
 
 /**
  * The fallback language of the plugin, which can be replaced at build time by Rollup.
@@ -38,6 +55,37 @@ declare const __PLUGIN_FALLBACK_LANGUAGE__: string | undefined;
 export const DEFAULT_FALLBACK_LANGUAGE = "en" as const;
 
 /**
+ *  Returns obsidians current locale setting.
+ *  This function is intended to be called during initialization
+ *  of the i18n service to determine the user's preferred language.
+ *
+ *  @param {App} app - The Obsidian application instance.
+ *  @returns {sting|null}
+ */
+export function getAppLocale(app: App): string|null {
+  const vault    = app.vault as VaultWithConfig;
+  return vault.getConfig("locale");
+}
+
+/**
+ * Returns the browser language stored in localStorage, normalized to a base language code.
+ *
+ * Chromium-based environments (including Obsidian) may persist the UI language
+ * under the `language` key in `window.localStorage`, typically in BCP-47 format
+ * (e.g. "de-DE", "en-US").
+ *
+ * The returned value is reduced to the primary language subtag (e.g. "de", "en").
+ *
+ * @returns {string | null}
+ *   The normalized base language code if present, otherwise `null` when no
+ *   language information is stored.
+ */
+export function getBrowserLocale(): string|null {
+  const lang = window.localStorage.getItem("language");
+  return lang ? lang.split("-")[0] : null;
+}
+
+/**
  * Resolves the effective language to use for translations, based on the requested language,
  * the optional build-time plugin fallback, and the static default fallback.
  *
@@ -63,8 +111,8 @@ export const DEFAULT_FALLBACK_LANGUAGE = "en" as const;
  * });
  * ```
  */
-export function resolveLanguage(
-  resources: I18NResourcesByLang,
+export function resolveLanguage<T extends Record<string, true>>(
+  resources: I18NResourcesByLang<T>,
   requested: string = "unknown"
 ): string {
   // 1. Requested language is explicitly available
