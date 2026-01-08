@@ -1,0 +1,41 @@
+name: Release → npm
+
+# Trigger: neuer Release published
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Repository auschecken
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2️⃣ Node.js Setup
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org/
+
+      # 3️⃣ Dependencies installieren
+      - name: Install dependencies
+        run: npm install
+
+      # 4️⃣ Tests ausführen
+      - name: Run tests
+        run: npm run test
+
+      # 5️⃣ Build (Rollup)
+      - name: Build package
+        run: npm run build
+
+      # 6️⃣ Publish bei npm
+      - name: Publish to npm
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
