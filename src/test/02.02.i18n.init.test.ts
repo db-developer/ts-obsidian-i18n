@@ -96,7 +96,7 @@ describe(`Running ${(fileURLToPath(import.meta.url).split(path.sep).join("/").sp
       vi.doMock("../lib/i18n.internal", () => ({
         getAppLocale: () => "de",
         getBrowserLocale: () => "en",
-        resolveLanguage: (r: any) => Object.keys(r)[0],
+        resolveFallback: (r: any) => Object.keys(r)[0],
       }));
 
       const { I18NService } = await import("../lib/i18n");
@@ -114,7 +114,7 @@ describe(`Running ${(fileURLToPath(import.meta.url).split(path.sep).join("/").sp
       vi.doMock("../lib/i18n.internal", () => ({
         getAppLocale: () => "de",
         getBrowserLocale: () => "en",
-        resolveLanguage: (r: any) => Object.keys(r)[0],
+        resolveFallback: (r: any) => Object.keys(r)[0],
       }));
 
 

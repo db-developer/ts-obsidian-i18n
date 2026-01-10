@@ -1,3 +1,5 @@
+import type { App                 } from "obsidian";
+
 /**
  * Compile-time registry for all valid i18n translation keys.
  *
@@ -23,3 +25,19 @@ export type I18NResource<T extends Record<string, true>> = {[K in keyof T]: stri
  * Collection of language resources indexed by language code.
  */
 export type I18NResourcesByLang<T extends Record<string, true>> = Record<string, I18NResource<T>>;
+
+/**
+ * Represents a Vault object with access to configuration values.
+ *
+ * Extends the standard Obsidian Vault (`App["vault"]`) by adding a
+ * `getConfig` method to retrieve stored configuration keys.
+ *
+ * @typedef {App["vault"] & { getConfig(key: string): string | null }} VaultWithConfig
+ *
+ * @property {function(string): string | null} getConfig
+ *   Retrieves the value of a configuration key from the vault.
+ *   Returns `null` if the key does not exist.
+ */
+export type VaultWithConfig = App["vault"] & {
+  getConfig(key: string): string | null;
+};

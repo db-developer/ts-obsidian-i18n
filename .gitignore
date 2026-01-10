@@ -27,3 +27,7 @@ index.d.ts
 index.d.ts.map
 log.d.ts
 log.d.ts.map
+
+# AI docs
+docs/claude
+docs/gpt4

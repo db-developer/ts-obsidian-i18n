@@ -8,10 +8,10 @@ const resources = {
 };
 
 import { App                       } from "obsidian";
+import { DEFAULT_FALLBACK_LANGUAGE } from "../lib/config";       
 import { getAppLocale,
          getBrowserLocale,
-         resolveLanguage, 
-         DEFAULT_FALLBACK_LANGUAGE } from "../lib/i18n.internal";
+         resolveFallback           } from "../lib/i18n.internal";
 
 // Vitest/Jest helpers to mock global constant
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -29,8 +29,8 @@ describe(`Running ${(fileURLToPath(import.meta.url).split(path.sep).join("/").sp
     expect(typeof getAppLocale).toBe("function");
   });
 
-  test("resolveLanguage is exported and callable", () => {
-    expect(typeof resolveLanguage).toBe("function");
+  test("resolveFallback is exported and callable", () => {
+    expect(typeof resolveFallback).toBe("function");
   });
 
   describe("getAppLocale()", () => {
@@ -108,7 +108,7 @@ describe(`Running ${(fileURLToPath(import.meta.url).split(path.sep).join("/").sp
     });
   });
 
-  describe("resolveLanguage()", () => {
+  describe("resolveFallback()", () => {
 
     afterEach(() => {
       // reset mock after each test
@@ -116,30 +116,45 @@ describe(`Running ${(fileURLToPath(import.meta.url).split(path.sep).join("/").sp
     });
 
     test("returns requested language if present in resources", () => {
-      const result = resolveLanguage(resources, "de");
+      const result = resolveFallback(resources, "de");
       expect(result).toBe("de");
     });
 
-    test("returns build-time fallback language if requested is missing", () => {
+    test("returns build-time fallback language if requested is missing", async () => {
       setPluginFallbackLanguage("de");
-      const result = resolveLanguage(resources, "fr");
+      vi.resetModules();
+      
+      const { resolveFallback } = await import("../lib/i18n.internal");
+
+      const result = resolveFallback(resources, "fr");
       expect(result).toBe("de");
     });
 
-    test("ignores build-time fallback if not in resources, uses default fallback", () => {
+    test("ignores build-time fallback if not in resources, throws exception", async() => {
       setPluginFallbackLanguage("fr"); // fr not present
-      const result = resolveLanguage(resources, "it");
+      vi.resetModules();
+      
+      const { resolveFallback } = await import("../lib/i18n.internal");
+
+      expect(() => resolveFallback(resources, "it")).toThrowError(/No valid fallback language found/);
+    });
+
+    test("returns default fallback if requested language missing and no build-time fallback", async() => {
+      vi.resetModules();
+      
+      const { resolveFallback } = await import("../lib/i18n.internal");
+
+      const result = resolveFallback(resources, "it");
       expect(result).toBe(DEFAULT_FALLBACK_LANGUAGE);
     });
 
-    test("returns default fallback if requested language missing and no build-time fallback", () => {
-      const result = resolveLanguage(resources, "it");
-      expect(result).toBe(DEFAULT_FALLBACK_LANGUAGE);
-    });
+    test("throws error if requested, build-time fallback, and default fallback all missing", async () => {
+      vi.resetModules();
+      
+      const { resolveFallback } = await import("../lib/i18n.internal");
 
-    test("throws error if requested, build-time fallback, and default fallback all missing", () => {
       const emptyResources = {};
-      expect(() => resolveLanguage(emptyResources, "de")).toThrowError(
+      expect(() => resolveFallback(emptyResources, "de")).toThrowError(
         /No valid fallback language found/
       );
     });

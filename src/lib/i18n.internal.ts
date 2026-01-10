@@ -1,66 +1,26 @@
-import type { App                 } from "obsidian";
-import type { I18NResourcesByLang } from "./types"
+import { PLUGIN_FALLBACK_LANGUAGE  } from "./config";
+import type { App                  } from "obsidian";
+import type { I18NResourcesByLang,
+              VaultWithConfig      } from "./types"
 
 /**
- * Represents a Vault object with access to configuration values.
+ * Returns Obsidian's current locale setting.
  *
- * Extends the standard Obsidian Vault (`App["vault"]`) by adding a
- * `getConfig` method to retrieve stored configuration keys.
+ * This function is intended to be called during initialization of the i18n service
+ * to determine the user's preferred language. Its use is part of a "template method"
+ * in the business logic, allowing the higher-level flow to remain consistent
+ * while delegating the actual retrieval to this implementation.
  *
- * @typedef {App["vault"] & { getConfig(key: string): string | null }} VaultWithConfig
+ * Note:
+ * - The logic to retrieve the App locale from Obsidian is considered volatile
+ *   and may change with future Obsidian releases.
+ * - Extracting this logic into a separate function allows easier adaptation,
+ *   maintenance, and unit testing without affecting the main business logic.
+ * - `VaultWithConfig` acts as a simulation of the vault interface here,
+ *   keeping the business logic decoupled from direct Obsidian internals.
  *
- * @property {function(string): string | null} getConfig
- *   Retrieves the value of a configuration key from the vault.
- *   Returns `null` if the key does not exist.
- */
-type VaultWithConfig = App["vault"] & {
-  getConfig(key: string): string | null;
-};
-
-/**
- * The fallback language of the plugin, which can be replaced at build time by Rollup.
- *
- * This constant is optional and may be undefined if not replaced during the build.
- * Use a static default fallback in that case.
- *
- * Example Rollup replacement using `@rollup/plugin-replace`:
- * 
- * ```ts
- * import replace from '@rollup/plugin-replace';
- * 
- * replace({
- *   preventAssignment: true,
- *   __PLUGIN_FALLBACK_LANGUAGE__: JSON.stringify('de'),
- * });
- * ```
- *
- * Usage:
- * - Check if it's defined at runtime before using it.
- * - Combine with a static default fallback to ensure safety.
- */
-declare const __PLUGIN_FALLBACK_LANGUAGE__: string | undefined;
-
-/**
- * The static default fallback language used when neither the requested language
- * nor the build-time plugin fallback language is available in the resources.
- *
- * This value is guaranteed to exist and serves as the last-resort fallback.
- *
- * Example usage in `resolveLanguage`:
- * 
- * ```ts
- * const lang = resolveLanguage(requestedLang, resources);
- * ```
- */
-export const DEFAULT_FALLBACK_LANGUAGE = "en" as const;
-
-/**
- *  Returns obsidians current locale setting.
- *  This function is intended to be called during initialization
- *  of the i18n service to determine the user's preferred language.
- *
- *  @param {App} app - The Obsidian application instance.
- *  @returns {sting|null}
+ * @param {App} app - The Obsidian application instance.
+ * @returns {string|null} The current locale or null if not set.
  */
 export function getAppLocale(app: App): string|null {
   const vault    = app.vault as VaultWithConfig;
@@ -76,6 +36,13 @@ export function getAppLocale(app: App): string|null {
  *
  * The returned value is reduced to the primary language subtag (e.g. "de", "en").
  *
+ * Note:
+ * - Extracting this logic into a separate function allows easier adaptation,
+ *   maintenance, and unit testing without affecting the main business logic.
+ * - The call to this function is part of a "template method" pattern within
+ *   the business logic, enabling a consistent high-level flow while delegating
+ *   the retrieval details.
+ *
  * @returns {string | null}
  *   The normalized base language code if present, otherwise `null` when no
  *   language information is stored.
@@ -86,14 +53,14 @@ export function getBrowserLocale(): string|null {
 }
 
 /**
- * Resolves the effective language to use for translations, based on the requested language,
+ * Resolves the fallback language to use for translations, based on a requested language,
  * the optional build-time plugin fallback, and the static default fallback.
+ * The function ensures that the returned language code exists in the provided resources.
  *
  * Resolution order:
  * 1. If the requested language exists in the provided resources, it is used.
- * 2. If a build-time fallback language (__PLUGIN_FALLBACK_LANGUAGE__) is defined and exists in the resources, it is used.
- * 3. If the static default fallback (DEFAULT_FALLBACK_LANGUAGE) exists in the resources, it is used.
- * 4. If none of the above are valid, an error is thrown indicating a misconfiguration.
+ * 2. If the static default fallback (PLUGIN_FALLBACK_LANGUAGE) exists in the resources, it is used.
+ * 3. If none of the above are valid, an error is thrown indicating a misconfiguration.
  *
  * @param resources - The map of available translations, keyed by language code.
  * @param requested - The language requested by the user or system (e.g., from localStorage).
@@ -110,8 +77,16 @@ export function getBrowserLocale(): string|null {
  *   __PLUGIN_FALLBACK_LANGUAGE__: JSON.stringify('de'),
  * });
  * ```
+ * 
+ * Note:
+ * - Extracting this logic into a separate function allows easier adaptation,
+ *   maintenance, and unit testing without affecting the main business logic.
+ * - Direct accesses to `config.ts` are encapsulated within this function,
+ *   keeping the business logic decoupled from configuration details.
+ * - The call to this function is part of the I18NService initialization and
+ *   guarantees that a valid fallback language is always available.
  */
-export function resolveLanguage<T extends Record<string, true>>(
+export function resolveFallback<T extends Record<string, true>>(
   resources: I18NResourcesByLang<T>,
   requested: string = "unknown"
 ): string {
@@ -120,17 +95,9 @@ export function resolveLanguage<T extends Record<string, true>>(
     return requested;
   }
 
-  // 2. Build-time fallback is defined AND present in the resource set
-  if (
-    typeof __PLUGIN_FALLBACK_LANGUAGE__ === "string" &&
-    __PLUGIN_FALLBACK_LANGUAGE__ in resources
-  ) {
-    return __PLUGIN_FALLBACK_LANGUAGE__;
-  }
-
-  // 3. Static default fallback
-  if (DEFAULT_FALLBACK_LANGUAGE in resources) {
-    return DEFAULT_FALLBACK_LANGUAGE;
+  // 2. Static default fallback
+  if (PLUGIN_FALLBACK_LANGUAGE in resources) {
+    return PLUGIN_FALLBACK_LANGUAGE;
   }
 
   // 4. Hard misconfiguration (should never happen)

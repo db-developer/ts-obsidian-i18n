@@ -1,6 +1,6 @@
 {
   "name": "ts-obsidian-i18n",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Unified i18n for obsidian plugins",
   "author": "Dirk Brenckmann <db.developer@gmx.de>",
   "license": "MIT",
