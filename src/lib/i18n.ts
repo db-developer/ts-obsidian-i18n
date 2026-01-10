@@ -202,31 +202,42 @@ export class I18NService<T extends Record<string, true>> {
 
   /**
    * Core business logic for determining the **desired language** that the I18N service
-   * should provide to the user, following the template method design pattern.
+   * should provide to the user, implemented following the template method design pattern.
    *
-   * This method orchestrates multiple sources of locale information to resolve
-   * the language the user or system intends to use. Note that the **desired language**
-   * returned by this method may differ from the languages actually available in
-   * the translation resources.
+   * This method resolves the language that the user or runtime environment *intends*
+   * to use. The returned **desired language** may differ from the languages actually
+   * available in the translation resources and is therefore not guaranteed to be usable
+   * without further fallback handling.
+   *
+   * Context and rationale:
+   * - Obsidian is an Electron-based application and therefore always runs within a
+   *   Chromium environment.
+   * - There is no single, stable, or officially documented API for reliably determining
+   *   the language configured in Obsidian across versions.
+   * - Historically, different approaches have been required to infer the effective
+   *   locale, and not all of them are consistently available.
+   * - For this reason, locale detection is intentionally implemented as a *layered
+   *   heuristic* rather than as a strict environment distinction.
    *
    * Resolution order:
-   * 1. If an Obsidian application instance (`this.app`) is available, the locale
-   *    configured within Obsidian is used (`getAppLocale`).
-   * 2. Otherwise, the browser's locale is used as a fallback (`getBrowserLocale`).
-   * 3. If neither is available or resolvable, the provided `fallback` parameter is returned.
-   *    This fallback language is guaranteed to exist because it is resolved during
-   *    plugin initialization.
+   * 1. If an Obsidian application instance (`this.app`) is available, the locale inferred
+   *    from Obsidian-specific configuration is used (`getAppLocale`).
+   * 2. If this is unavailable or inconclusive, the runtime locale inferred from the
+   *    Chromium environment is used (`getBrowserLocale`).
+   * 3. If no locale can be determined, the provided `fallback` parameter is returned.
+   *    This fallback language is guaranteed to exist because it is resolved and validated
+   *    during plugin initialization.
    *
    * Important notes:
-   * - This method is **internal** and not part of the public contract, because only
-   *   during internal initialization can it be ensured that the fallback language
-   *   has a corresponding translation resource.
-   * - The passed `fallback` parameter serves as the **final choice** if all other
-   *   determinations fail, with the guarantee of an existing translation resource.
-   * - The method encapsulates the full business logic for evaluating the desired language,
-   *   delegating the actual retrieval details (Obsidian or browser) to helper functions.
-   * - It implements a template method pattern, providing a consistent high-level flow
-   *   while applying the resolution steps in a defined order.
+   * - This method is **internal** and must not be part of the public contract, as only
+   *   internal initialization can guarantee that the fallback language has a corresponding
+   *   translation resource.
+   * - The `fallback` parameter represents the **final and safe choice** if all other
+   *   determinations fail, ensuring predictable and stable behavior.
+   * - This method encapsulates the complete business logic for determining the *desired*
+   *   language, while delegating the actual locale probing to helper functions.
+   * - As a template method, it defines a fixed high-level control flow while allowing
+   *   individual resolution steps to evolve independently as Obsidian APIs change.
    *
    * @param fallback - The default language identifier to use if no desired locale can be resolved.
    *                   Guaranteed to have a translation resource.
