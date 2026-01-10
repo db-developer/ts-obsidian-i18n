@@ -43,6 +43,8 @@ This module is therefore designed to:
 * Automatic fallback to build-time or default language
 * Works seamlessly in multi-file plugin setups
 
+[Details on AI assistance during development](AI.md)
+
 ---
 
 ## Installation
